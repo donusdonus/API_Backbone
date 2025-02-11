@@ -19,6 +19,8 @@ from ping3 import ping, verbose_ping
 
 from PyUtility import utility_network
 
+#donusdonsu
+
 port = 20001
 hostname = socket.gethostname()
 hostaddr = socket.gethostbyname(hostname)
