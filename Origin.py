@@ -16,8 +16,8 @@ import copy
 # import win_inet_pton
 from pyModbusTCP.client import ModbusClient
 from ping3 import ping, verbose_ping
-
 from PyUtility import utility_network
+from FX5 import FX5
 
 port = 20001
 hostname = socket.gethostname()
@@ -133,6 +133,47 @@ class omron_fins_udp:
                         else:
                             self.transaction["except"] = "response fail 2"
                             event["ready"] = False
+                except Exception as e:
+                    self.transaction["except"] = str(e)
+                    event["ready"] = False
+        except Exception as e :
+            event["exception"] = str(e)
+            event["ready"] = False
+# microservice fx5u slmp
+class mitsubishi_slmp_tcp:
+    def __init__(self,event):
+        event["ready"] = True
+        self.ip = event["connection"]["source"]
+        self.port = str(event["connection"]["port"])
+        self.driver = FX5(self.ip + ":" + self.port)
+        try:
+            for self.transaction in event["command"]:
+                try:
+                        # github https://github.com/UTAIOT-team/mitsubishi-fx5/blob/try-oee_with_schedule/fx5.py
+                        if self.transaction["access"] == "r":
+                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
+                            self.driver.get_connection(event["connection"]["source"] + ":" + str(event["connection"]["port"]))
+                            self.sendback = []
+                            for x in range(self.mem["size"]):
+                                self.addr = "D" + str(self.mem["addr"] + x)
+                                self.result = self.driver.read(self.addr)
+                                self.sendback.append(self.result)
+                            self.transaction["value"] = self.sendback
+                            print(self.transaction["value"])
+                            
+                        #check writemode and size write match with value length
+                        elif ((self.transaction["access"] == "w") and (int(self.transaction["size"]) == int(len(self.transaction["value"])) )):
+                            #{"access": "w", "addr": "D1000", "size": 10,"value": [0, 1, 2, 0, 23, 434, 123, 343, 454, 343, 343, 3434], "except": ""}
+                            self.datawrite = []
+                            for self.dataout in self.transaction["value"] :
+                                    self.HB = int(self.dataout)>>8 & 0xFF
+                                    self.LB = int(self.dataout) & 0xFF
+                                    self.datawrite.append(self.HB)
+                                    self.datawrite.append(self.LB)
+                            self.datawrite_byte = bytearray(self.datawrite)
+                            self.res = self.driver.memory_area_write(self.plcarea,(self.plcaddress<<8).to_bytes(3,'big'),self.datawrite_byte,int(self.transaction["size"]))
+                            self.complete=0
+                            
                 except Exception as e:
                     self.transaction["except"] = str(e)
                     event["ready"] = False
@@ -766,6 +807,20 @@ def server():
                         #                "exception": ""
                         #            }
                         drive.service(event)
+                    elif event['service'] == "mitsubishi_fx5u_slmp_tcp" : 
+                        # Package Example
+                        # {
+                        #    "service": "mitsubishi_fx5u_slmp",
+                        #    "connection": {"source":"192.168.1.198","port":20000},
+                        #    "command": [
+                        #                  {"access":"r","addr":"D20000","size":10,"value":[0,1,2,3,4,5,6,7,8,9],"except":""},
+                        #                  {"access":"w","addr":"D1000","size":10,"value":[0,1,2,0,23,434,123,343,454,343,343,3434],"except":""}
+                        #                ]
+                        #    "response": [],
+                        #    "ready": 0,
+                        #    "exception": ""
+                        # }
+                        mitsubishi_slmp_tcp(event)
                     else:
                         event['ready'] = False
                         event['exception'] = "Service NotFound"
@@ -778,6 +833,7 @@ def server():
                 SendbackToClientAndCloseConnection(res, {'error': str(ex)})
             # my_code = 'print(event)'
             # exec(my_code)
+
 
 PID_server = Thread(target=server)
 PID_ping = Thread(target=server_ping)
