@@ -152,7 +152,7 @@ class mitsubishi_slmp_tcp:
                         # github https://github.com/UTAIOT-team/mitsubishi-fx5/blob/try-oee_with_schedule/fx5.py
                         if self.transaction["access"] == "r":
                             self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
-                            self.driver.get_connection(event["connection"]["source"] + ":" + str(event["connection"]["port"]))
+                            self.driver.get_connection(self.ip + ":" + self.port)
                             self.sendback = []
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
@@ -164,15 +164,13 @@ class mitsubishi_slmp_tcp:
                         #check writemode and size write match with value length
                         elif ((self.transaction["access"] == "w") and (int(self.transaction["size"]) == int(len(self.transaction["value"])) )):
                             #{"access": "w", "addr": "D1000", "size": 10,"value": [0, 1, 2, 0, 23, 434, 123, 343, 454, 343, 343, 3434], "except": ""}
-                            self.datawrite = []
-                            for self.dataout in self.transaction["value"] :
-                                    self.HB = int(self.dataout)>>8 & 0xFF
-                                    self.LB = int(self.dataout) & 0xFF
-                                    self.datawrite.append(self.HB)
-                                    self.datawrite.append(self.LB)
-                            self.datawrite_byte = bytearray(self.datawrite)
-                            self.res = self.driver.memory_area_write(self.plcarea,(self.plcaddress<<8).to_bytes(3,'big'),self.datawrite_byte,int(self.transaction["size"]))
-                            self.complete=0
+                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
+                            self.driver.get_connection(self.ip + ":" + self.port)
+                            for x in range(self.mem["size"]):
+                                self.addr = "D" + str(self.mem["addr"] + x)
+                                self.value = self.transaction["value"][x]
+                                print("cmd " + self.addr + " write " + str(self.value))
+                                self.driver.write(self.addr,self.value)
                             
                 except Exception as e:
                     self.transaction["except"] = str(e)
