@@ -174,7 +174,7 @@ class mitsubishi_slmp_tcp:
                                 self.value = self.transaction["value"][x]
                                 print("cmd " + self.addr + " write " + str(self.value))
                                 self.driver.write(self.addr,self.value)
-                            
+                              
                 except Exception as e:
                     self.transaction["except"] = str(e)
                     event["ready"] = False
@@ -672,7 +672,7 @@ def server():
         #        ]
         # }
         res, client = s.accept()
-        time.sleep(0.5)
+        time.sleep(0.1)
         recive = res.recv(1000000)
         if not recive:
             res.close()
