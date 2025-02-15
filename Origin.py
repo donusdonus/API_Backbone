@@ -19,6 +19,7 @@ from ping3 import ping, verbose_ping
 from PyUtility import utility_network
 from FX5 import FX5
 
+
 port = 20001
 hostname = socket.gethostname()
 hostaddr = socket.gethostbyname(hostname)
