@@ -1,4 +1,5 @@
 # pip install pymssql
+import sys
 import array
 import threading
 import time
@@ -19,6 +20,7 @@ from ping3 import ping, verbose_ping
 from PyUtility import utility_network
 from FX5 import FX5
 
+sys.path.append(os.path.abspath(os.path.dirname('D:\FactoryCommPY\API_Backbone\PyUtility.py')))  # เพิ่ม path ของไฟล์ปัจจุบัน
 
 port = 20001
 hostname = socket.gethostname()

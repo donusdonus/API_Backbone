@@ -1,1 +1,4 @@
 pyinstaller --onefile Origin.py
+
+(Complete execute cmd)
+pyinstaller --onefile --paths=D:\FactoryCommPY\API_Backbone Origin.py

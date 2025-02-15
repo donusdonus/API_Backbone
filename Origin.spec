@@ -3,7 +3,7 @@
 
 a = Analysis(
     ['Origin.py'],
-    pathex=[],
+    pathex=['D:\\FactoryCommPY\\API_Backbone'],
     binaries=[],
     datas=[],
     hiddenimports=[],
