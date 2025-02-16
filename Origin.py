@@ -148,13 +148,13 @@ class mitsubishi_slmp_tcp:
         event["ready"] = True
         self.ip = event["connection"]["source"]
         self.port = str(event["connection"]["port"])
-        self.driver = FX5(self.ip + ":" + self.port)
         try:
             for self.transaction in event["command"]:
                 try:
                         # github https://github.com/UTAIOT-team/mitsubishi-fx5/blob/try-oee_with_schedule/fx5.py
                         if self.transaction["access"] == "r":
                             self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
+                            self.driver = FX5(self.ip + ":" + self.port)
                             self.driver.get_connection(self.ip + ":" + self.port)
                             self.sendback = []
                             for x in range(self.mem["size"]):
@@ -163,17 +163,20 @@ class mitsubishi_slmp_tcp:
                                 self.sendback.append(self.result)
                             self.transaction["value"] = self.sendback
                             print(self.transaction["value"])
+                            self.driver.close_all()
                             
                         #check writemode and size write match with value length
                         elif ((self.transaction["access"] == "w") and (int(self.transaction["size"]) == int(len(self.transaction["value"])) )):
                             #{"access": "w", "addr": "D1000", "size": 10,"value": [0, 1, 2, 0, 23, 434, 123, 343, 454, 343, 343, 3434], "except": ""}
                             self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
+                            self.driver = FX5(self.ip + ":" + self.port)
                             self.driver.get_connection(self.ip + ":" + self.port)
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
                                 self.value = self.transaction["value"][x]
                                 print("cmd " + self.addr + " write " + str(self.value))
                                 self.driver.write(self.addr,self.value)
+                            self.driver.close_all()
                               
                 except Exception as e:
                     self.transaction["except"] = str(e)
@@ -672,7 +675,7 @@ def server():
         #        ]
         # }
         res, client = s.accept()
-        time.sleep(0.1)
+        time.sleep(0.5)
         recive = res.recv(1000000)
         if not recive:
             res.close()
