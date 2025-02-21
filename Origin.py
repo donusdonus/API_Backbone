@@ -148,45 +148,52 @@ class mitsubishi_slmp_tcp:
         event["ready"] = True
         self.ip = event["connection"]["source"]
         self.port = str(event["connection"]["port"])
+        self.driver = FX5(self.ip + ":" + self.port)
+        self.driver.get_connection(self.ip + ":" + self.port)
+        self.mem = []
         try:
+            
             for self.transaction in event["command"]:
+                print("Command : " + str(self.transaction))
                 try:
                         # github https://github.com/UTAIOT-team/mitsubishi-fx5/blob/try-oee_with_schedule/fx5.py
                         if self.transaction["access"] == "r":
                             self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
-                            self.driver = FX5(self.ip + ":" + self.port)
-                            self.driver.get_connection(self.ip + ":" + self.port)
+                            self.driver = FX5(self.ip + ":" + self.port)        
                             self.sendback = []
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
                                 self.result = self.driver.read(self.addr)
                                 self.sendback.append(self.result)
-                            self.transaction["value"] = self.sendback
-                            print(self.transaction["value"])
-                            self.driver.close_all()
+                                self.transaction["value"] = self.sendback
+                            print("READ FX5U " + self.ip +":"+self.port+" " + str(self.transaction["addr"][1:]) + str(self.transaction["value"]))
+                            #for debug
                             
                         #check writemode and size write match with value length
                         elif ((self.transaction["access"] == "w") and (int(self.transaction["size"]) == int(len(self.transaction["value"])) )):
                             #{"access": "w", "addr": "D1000", "size": 10,"value": [0, 1, 2, 0, 23, 434, 123, 343, 454, 343, 343, 3434], "except": ""}
-                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
-                            self.driver = FX5(self.ip + ":" + self.port)
-                            self.driver.get_connection(self.ip + ":" + self.port)
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
                                 self.value = self.transaction["value"][x]
-                                print("cmd " + self.addr + " write " + str(self.value))
                                 self.driver.write(self.addr,self.value)
-                            self.driver.close_all()
+                            print("WRITE FX5U " + self.ip +":"+self.port+" " + str(self.transaction["addr"][1:]) + str(self.transaction["value"]))
+                            #for debug
                               
                 except Exception as e:
                     self.transaction["except"] = str(e)
                     event["ready"] = False
+                    
+            self.driver.close_all()
+            
         except Exception as e :
-            event["exception"] = str(e)
+            event["except"] = str(e)
             event["ready"] = False
 # microservice ping
 class os_ping:
     # Package Example
+    
+    
+    
     # {
     #    "service": "ping",
     #    "connection":"",
@@ -649,7 +656,7 @@ def server():
     print("Software : FactoryComm")
     print("Server : " + str(hostname) + "\r")
     print("Service Path : " + str(hostaddr) + ":" + str(port) + "\r")
-    print("API Verison : 2.5" + "\r")
+    print("API Verison : 3.0" + "\r")
     print("**************************************************************************************************")
     s = socket.socket()
     s.bind(('', port))
