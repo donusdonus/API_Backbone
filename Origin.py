@@ -18,7 +18,7 @@ import copy
 from pyModbusTCP.client import ModbusClient
 from ping3 import ping, verbose_ping
 from PyUtility import utility_network
-from FX5 import FX5
+from fx5 import FX5
 
 sys.path.append(os.path.abspath(os.path.dirname('D:\FactoryCommPY\API_Backbone\PyUtility.py')))  # เพิ่ม path ของไฟล์ปัจจุบัน
 
@@ -148,8 +148,7 @@ class mitsubishi_slmp_tcp:
         event["ready"] = True
         self.ip = event["connection"]["source"]
         self.port = str(event["connection"]["port"])
-        self.driver = FX5(self.ip + ":" + self.port)
-        self.driver.get_connection(self.ip + ":" + self.port)
+        self.connection =  FX5.get_connection(self.ip + ":" + self.port)
         self.mem = []
         try:
             
@@ -158,12 +157,11 @@ class mitsubishi_slmp_tcp:
                 try:
                         # github https://github.com/UTAIOT-team/mitsubishi-fx5/blob/try-oee_with_schedule/fx5.py
                         if self.transaction["access"] == "r":
-                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
-                            self.driver = FX5(self.ip + ":" + self.port)        
+                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}       
                             self.sendback = []
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
-                                self.result = self.driver.read(self.addr)
+                                self.result = self.connection.read(self.addr)
                                 self.sendback.append(self.result)
                                 self.transaction["value"] = self.sendback
                             print("READ FX5U " + self.ip +":"+self.port+" " + str(self.transaction["addr"][1:]) + str(self.transaction["value"]))
@@ -172,10 +170,13 @@ class mitsubishi_slmp_tcp:
                         #check writemode and size write match with value length
                         elif ((self.transaction["access"] == "w") and (int(self.transaction["size"]) == int(len(self.transaction["value"])) )):
                             #{"access": "w", "addr": "D1000", "size": 10,"value": [0, 1, 2, 0, 23, 434, 123, 343, 454, 343, 343, 3434], "except": ""}
+                            print("TRANSACTION : " + str(self.transaction))
+                            self.mem = {"addr":int(self.transaction["addr"][1:]),"size":self.transaction["size"]}
                             for x in range(self.mem["size"]):
                                 self.addr = "D" + str(self.mem["addr"] + x)
                                 self.value = self.transaction["value"][x]
-                                self.driver.write(self.addr,self.value)
+                                self.connection.write(self.addr,self.value)
+
                             print("WRITE FX5U " + self.ip +":"+self.port+" " + str(self.transaction["addr"][1:]) + str(self.transaction["value"]))
                             #for debug
                               
@@ -183,7 +184,7 @@ class mitsubishi_slmp_tcp:
                     self.transaction["except"] = str(e)
                     event["ready"] = False
                     
-            self.driver.close_all()
+            self.connection.close()
             
         except Exception as e :
             event["except"] = str(e)
