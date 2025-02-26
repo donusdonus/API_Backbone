@@ -657,7 +657,7 @@ def server():
     print("Software : FactoryComm")
     print("Server : " + str(hostname) + "\r")
     print("Service Path : " + str(hostaddr) + ":" + str(port) + "\r")
-    print("API Verison : 3.0" + "\r")
+    print("API Verison : 3.2" + "\r")
     print("**************************************************************************************************")
     s = socket.socket()
     s.bind(('', port))
