@@ -20,6 +20,10 @@ from ping3 import ping, verbose_ping
 from PyUtility import utility_network
 from fx5 import FX5
 
+import os
+from PIL import Image
+import zpl
+
 sys.path.append(os.path.abspath(os.path.dirname('D:\FactoryCommPY\API_Backbone\PyUtility.py')))  # เพิ่ม path ของไฟล์ปัจจุบัน
 
 port = 20001
@@ -56,6 +60,52 @@ def SendbackHtmlToClientAndCloseConnection(client, data):
     client.sendall(sendback.encode())
     client.close()
     return 0
+
+# printer TSE210
+class tse210:
+    def __init__(self,event):
+        try:
+            # "connection": {"source":"10.107.112.107","port":30114,"width:"}
+            event["ready"] = True
+            self.ip = event["connection"]["source"]
+            self.port = int(event["connection"]["port"])
+            self.paper_width = int(event["connection"]["page"]["width"])
+            self.paper_height = int(event["connection"]["page"]["height"])
+            self.stack = []
+            self.label = zpl.Label(self.paper_height,self.paper_width)
+            
+            for self.transaction in event["command"]:
+                print(self.transaction["access"])
+                try :  
+                    if(self.transaction["access"] == "T"):
+                        self.label.origin(int(self.transaction["X"]),int(self.transaction["Y"]))
+                        self.label.write_text(
+                                                self.transaction["data"],
+                                                char_height=int(self.transaction["charheight"]),
+                                                char_width=int(self.transaction["charwidth"]),
+                                                line_width=int(self.transaction["linewidth"]),
+                                                justification=self.transaction["justify"]
+                                            )
+                        self.label.endorigin()
+                        
+                    elif(self.transaction["access"] == "Q"):
+                        self.label.origin(int(self.transaction["X"]),int(self.transaction["Y"]))
+                        self.label.barcode('Q',self.transaction["data"],magnification=self.transaction["size"])
+                        self.label.endorigin()
+                    #self.transaction["cmd"]
+                except Exception as e :
+                    self.transaction["except"] = str(e)
+            print(self.label.dumpZPL())
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+            self.sock.connect((self.ip,self.port))  
+            self.sock.send(str.encode(self.label.dumpZPL()))
+
+        except Exception as e :
+            event["exception"] = str(e)
+            event["ready"] = False 
+        
+    
+
 # microservice fins_udp
 class omron_fins_udp:
     # Package Example
@@ -833,6 +883,20 @@ def server():
                         #    "exception": ""
                         # }
                         mitsubishi_slmp_tcp(event)
+                    elif event['service'] == "printer_tse210" : 
+                        # Package Example
+                        # {
+                        #    "service": "printer_tse210",
+                        #    "connection": {"source":"10.107.112.120","port":9100,"page":{"width":30,"height":30}},
+                        #    "command": [
+                        #                  {"access":"T","X":0,"Y":0,"data":"HELLO WORLD","charheight":10,"charwidth":20,"linewidth":30,"justify":"C","except":""},
+                        #                  {"access":"Q","X":0,"Y":0,"data":"TEST QRCODE","size":10,"except":""}
+                        #                ]
+                        #    "response": [],
+                        #    "ready": 0,
+                        #    "exception": ""
+                        # }
+                        tse210(event)
                     else:
                         event['ready'] = False
                         event['exception'] = "Service NotFound"
