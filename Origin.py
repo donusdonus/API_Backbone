@@ -104,7 +104,24 @@ class tse210:
             event["exception"] = str(e)
             event["ready"] = False 
         
-    
+# python on service
+class pyexecute:
+    def __init__(self,event):
+        event["ready"] = True
+        try:
+            # "connection": {"source":"10.107.112.107","port":30114,"width:"}
+            event["ready"] = True
+            for self.transaction in event["command"]:
+                try :  
+                        exec(self.transaction["code"],locals())
+                        self.transaction["res"] = self.res
+                except Exception as e :
+                    self.transaction["except"] = str(e)
+        except Exception as e :
+            event["exception"] = str(e)
+            event["ready"] = False 
+        
+        
 
 # microservice fins_udp
 class omron_fins_udp:
@@ -897,6 +914,15 @@ def server():
                         #    "exception": ""
                         # }
                         tse210(event)
+                    elif event['service'] == "python" :
+                        # Package Example
+                        # {
+                        #    "code": "print('Hello World')",
+                        #    "response": "",
+                        #    "ready": 0,
+                        #    "exception": ""
+                        # }
+                        pyexecute(event)
                     else:
                         event['ready'] = False
                         event['exception'] = "Service NotFound"

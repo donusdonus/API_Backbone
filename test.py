@@ -33,7 +33,7 @@ def System_EODS(QRCode,Line1,Line2,Line3):
 def System_ECheckSheet():
     x=0
 
-
+'''
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
 sock.connect(('10.107.113.76', 9100))  
 #sock.send('Test\n')  
@@ -43,7 +43,7 @@ sock.send(str.encode(System_EODS(
                                   "E 220d AMG Line",
                                   "")))  
 sock.close()
-
+'''
 # EODS
 # QR
 # ModelCode-FGCode-ProdCode-FDOK-Station-Datetime
@@ -103,3 +103,15 @@ print(l.dumpZPL())
 l.preview()
 '''
 
+txt = "result = 20+3"
+
+exec(txt,locals())
+
+print(result)
+
+l = zpl.Label(30,30)
+l.origin(6,1) 
+l.barcode('Q',"Hello World", magnification=3)
+l.endorigin()
+
+self.res = l.dumpZPL()
