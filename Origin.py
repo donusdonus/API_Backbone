@@ -30,6 +30,7 @@ port = 20001
 hostname = socket.gethostname()
 hostaddr = socket.gethostbyname(hostname)
 #use for ping server
+printer_blocking = []
 ip_group = []
 ping_package = {"addr":0,"value":0,"scantime":0,"except":""}
 
@@ -96,6 +97,9 @@ class tse210:
                 except Exception as e :
                     self.transaction["except"] = str(e)
             print(self.label.dumpZPL())
+            
+            
+            
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
             self.sock.connect((self.ip,self.port))  
             self.sock.send(str.encode(self.label.dumpZPL()))
@@ -681,40 +685,55 @@ class pf6000:
                 event["ready"] = False
                 event["exception"] = str(e)
 
+#strem data
+global_buffer = []
+for init_block in range(65535) : 
+    global_buffer.append("")
+
 class stream:
     #            {
     #                "service": "stream",
-    #                "connection": {"block":0,"cmd":"read/write"},
-    #                "command": " string if write ",
-    #                "response": " string if read ",
+    #                "command": "[{"id":0,"cmd":"read/read_clear/write/write_block","data":"","except":""}]",
+    #                "response": "[]",
     #                "ready": 0,
     #                "exception": ""
     #            }
-    block = []
-    maxsize = 0
-    def __init__(self,size):
-        self.block = [None]*size;
-        self.maxsize = size;
-
-    def service(self,event):
-        event["exception"]
-        event["ready"] = False
+    def __init__(self,event,buffer):
+        event["response"] = []
+        event["ready"] = True
         try:
-            if (int(event["connection"]["block"]) <= self.maxsize-1) and (int(event["connection"]["block"]) > -1) :
-                if event["connection"]["cmd"] == "read" :
-                    event["response"] = self.block[int(event["connection"]["block"])]
-                    event["ready"] = True
-                elif event["connection"]["cmd"] == "write" :
-                    self.block[int(event["connection"]["block"])] = event["command"]
-                    event["response"] = ""
-                    event["ready"] = True
-            else:
-                event["exception"] = "offset fail"
-                event["ready"] = False
+            for x in range(len(event["command"])): 
+                try:
+                    self.id = event["command"][x]["id"]
+                    self.cmd = event["command"][x]["cmd"]
+                    
+                    if self.cmd == "read" :
+                            event["command"][x]["data"] = buffer[self.id]
+                            
+                    elif self.cmd == "read_clear":
+                            
+                            event["command"][x]["data"] = buffer[self.id]
+                            if buffer[self.id] != "" :
+                                buffer[self.id] = ""
+                            
+                    elif self.cmd == "write":
+                            buffer[self.id] = event["command"][x]["data"]
+                            
+                    elif self.cmd == "write_block":
+                            if buffer[self.id] == "" :
+                                buffer[self.id] = event["command"][x]["data"]
+                    else:
+                            event["command"][x]["except"] = "User Commmand Missing"
+                            event["ready"] = False
+            
+    
+                except Exception as e :
+                    event["command"][x]["except"] = str(e)
+                    event["ready"] = False
+                
         except Exception as e :
             event["exception"] = str(e)
             event["ready"] = False
-drive = stream(100)
 
 def server():
     ethernet_service , port_service = utility_network().UISelectIPMachine()
@@ -724,7 +743,7 @@ def server():
     print("Software : FactoryComm")
     print("Server : " + str(hostname) + "\r")
     print("Service Path : " + str(hostaddr) + ":" + str(port) + "\r")
-    print("API Verison : 3.2" + "\r")
+    print("API Verison : 5.0" + "\r")
     print("**************************************************************************************************")
     s = socket.socket()
     s.bind(('', port))
@@ -885,7 +904,7 @@ def server():
                         #                "ready": 0,
                         #                "exception": ""
                         #            }
-                        drive.service(event)
+                        stream(event,global_buffer)
                     elif event['service'] == "mitsubishi_fx5u_slmp_tcp" : 
                         # Package Example
                         # {
@@ -913,7 +932,8 @@ def server():
                         #    "ready": 0,
                         #    "exception": ""
                         # }
-                        tse210(event)
+                            tse210(event)
+                            
                     elif event['service'] == "python" :
                         # Package Example
                         # {
